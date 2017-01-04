@@ -1,3 +1,10 @@
+language: "python"
+python:
+  - "2.7"
+install:
+  pip install flake8
+script:
+  flake8 mcfw
 deploy:
   provider: pypi
   user: rogerthat-platform
