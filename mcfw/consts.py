@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 # @@license_version:1.1@@
+
 import os
 
 
@@ -29,7 +30,9 @@ class MissingClass(object):
 
 MISSING = MissingClass()
 del MissingClass
+
 SERVER_SOFTWARE = os.environ.get('SERVER_SOFTWARE', 'Development')
 DEBUG = SERVER_SOFTWARE.startswith('Development')
+
 AUTHENTICATED = 'authenticated'
 NOT_AUTHENTICATED = 'non_authenticated'

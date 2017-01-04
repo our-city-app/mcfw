@@ -74,7 +74,7 @@ def register_postcall_hook(callable_):
     _postcall_hooks.append(callable_)
 
 
-def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION):
+def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix=None, silent=False, silent_result=False):
     if method not in ('get', 'post', 'put', 'delete'):
         ValueError('method')
     if scopes is None:
@@ -90,11 +90,18 @@ def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION):
             return f(*args, **kwargs)
 
         wrapped.__name__ = f.__name__
+
+        api_url = INJECTED_FUNCTIONS.get_api_url_template(version, uri)
+        if uri_prefix:
+            api_url = "/%s%s" % (uri_prefix , api_url)
+
         wrapped.meta = {
             'rest': True,
-            'uri': INJECTED_FUNCTIONS.get_api_url_template(version, uri),
+            'uri': api_url,
             'scopes': scopes,
-            'method': method
+            'method': method,
+            "silent": silent,
+            "silent_result": silent_result
         }
         if hasattr(f, 'meta'):
             wrapped.meta.update(f.meta)
