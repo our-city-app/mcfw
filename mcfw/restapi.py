@@ -20,10 +20,9 @@ import inspect
 import json
 import logging
 import threading
+import webapp2
 from collections import defaultdict
 from types import NoneType
-
-import webapp2
 
 from consts import DEBUG, AUTHENTICATED, NOT_AUTHENTICATED
 from mcfw.exceptions import HttpException, HttpBadRequestException
@@ -74,7 +73,8 @@ def register_postcall_hook(callable_):
     _postcall_hooks.append(callable_)
 
 
-def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix=None, silent=False, silent_result=False):
+def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix=None, silent=False,
+         silent_result=False):
     if method not in ('get', 'post', 'put', 'delete'):
         ValueError('method')
     if scopes is None:
@@ -93,7 +93,7 @@ def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix
 
         api_url = INJECTED_FUNCTIONS.get_api_url_template(version, uri)
         if uri_prefix:
-            api_url = "/%s%s" % (uri_prefix , api_url)
+            api_url = "/%s%s" % (uri_prefix, api_url)
 
         wrapped.meta = {
             'rest': True,
