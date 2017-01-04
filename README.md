@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/rogerthat-platform/mcfw.svg?branch=master)](https://travis-ci.org/rogerthat-platform/mcfw)
+
 This framework is currently only supported on Google Appengine projects.
 
 Here is an example of how the @rest function can be used:
