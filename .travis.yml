@@ -5,6 +5,10 @@ install:
   pip install flake8
 script:
   flake8 mcfw
+notifications:
+  email:
+    on_success: change
+    on_failure: always
 deploy:
   provider: pypi
   user: rogerthat-platform
