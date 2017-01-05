@@ -2,3 +2,7 @@
 dist/
 mcfw.egg-info/
 *.pyc
+.project
+.pydevproject
+.settings
+.DS_Store

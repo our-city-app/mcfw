@@ -248,8 +248,17 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
             session = INJECTED_FUNCTIONS.get_current_session()
             if not session:
                 self.abort(httplib.UNAUTHORIZED)
-            if f.meta['scopes'] and not any(scope in f.meta['scopes'] for scope in session.scopes):
-                self.abort(httplib.FORBIDDEN)
+
+            if f.meta['scopes']:
+                scopes = set()
+                for scope in f.meta['scopes']:
+                    for kwarg in kwargs:
+                        part_to_replace = '{%s}' % kwarg
+                        scopes.add(scope.replace(part_to_replace, kwargs[kwarg]))
+
+                if not any(scope in scopes for scope in session.scopes):
+                    self.abort(httplib.FORBIDDEN)
+
         for hook in _precall_hooks:
             hook(f, *args, **kwargs)
         try:
