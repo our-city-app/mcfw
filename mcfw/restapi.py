@@ -253,8 +253,12 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
                 scopes = set()
                 for scope in f.meta['scopes']:
                     for kwarg in kwargs:
-                        part_to_replace = '{%s}' % kwarg
-                        scopes.add(scope.replace(part_to_replace, kwargs[kwarg]))
+                        if isinstance(kwargs[kwarg], str):
+                            part_to_replace = '{%s}' % kwarg
+                            scopes.add(scope.replace(part_to_replace, kwargs[kwarg]))
+                            break
+                    else:
+                        scopes.add(scope)
 
                 if not any(scope in scopes for scope in session.scopes):
                     self.abort(httplib.FORBIDDEN)
