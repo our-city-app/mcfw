@@ -15,18 +15,20 @@
 #
 # @@license_version:1.1@@
 
+from collections import defaultdict
 import httplib
 import inspect
 import json
 import logging
 import threading
-import webapp2
-from collections import defaultdict
 from types import NoneType
 
 from consts import DEBUG, AUTHENTICATED, NOT_AUTHENTICATED
 from mcfw.exceptions import HttpException, HttpBadRequestException
+from mcfw.properties import simple_types
 from mcfw.rpc import run, ErrorResponse, serialize_complex_value, MissingArgumentException, parse_complex_value
+import webapp2
+
 
 DEFAULT_API_VERSION = 'v1.0'
 
@@ -251,14 +253,13 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
 
             if f.meta['scopes']:
                 scopes = set()
+                simple_kwargs = {}
+                for kwarg in kwargs:
+                    if type(kwargs[kwarg]) in simple_types:
+                        simple_kwargs[kwarg] = kwargs[kwarg]
+
                 for scope in f.meta['scopes']:
-                    for kwarg in kwargs:
-                        if isinstance(kwargs[kwarg], str):
-                            part_to_replace = '{%s}' % kwarg
-                            scopes.add(scope.replace(part_to_replace, kwargs[kwarg]))
-                            break
-                    else:
-                        scopes.add(scope)
+                    scopes.add(scope.format(**simple_kwargs))
 
                 if not any(scope in scopes for scope in session.scopes):
                     self.abort(httplib.FORBIDDEN)
