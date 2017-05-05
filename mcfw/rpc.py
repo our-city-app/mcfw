@@ -20,9 +20,8 @@ import itertools
 import logging
 import time
 import types
-from types import NoneType
-
 from google.appengine.ext import ndb
+from types import NoneType
 
 from cache import set_cache_key
 from mcfw.consts import MISSING
@@ -366,6 +365,8 @@ _complexParserCache = {}
 
 
 def _get_complex_parser(type_):
+    if type_ == dict:
+        return lambda x: x
     if type_ not in _complexParserCache:
         def parse(value):
             t = type_.get_subtype(value) if isinstance(type_, object_factory) else type_
