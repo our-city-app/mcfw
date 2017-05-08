@@ -15,20 +15,19 @@
 #
 # @@license_version:1.3@@
 
-from collections import defaultdict
 import httplib
 import inspect
 import json
 import logging
 import threading
+import webapp2
+from collections import defaultdict
 from types import NoneType
 
 from consts import DEBUG, AUTHENTICATED, NOT_AUTHENTICATED
 from mcfw.exceptions import HttpException, HttpBadRequestException
 from mcfw.properties import simple_types
 from mcfw.rpc import run, ErrorResponse, serialize_complex_value, MissingArgumentException, parse_complex_value
-import webapp2
-
 
 DEFAULT_API_VERSION = 'v1.0'
 
@@ -224,9 +223,9 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
         self.write_result(self.run(f, args, kwargs))
 
     def write_result(self, result):
-        self.response.headers = {
+        self.response.headers.update({
             'Content-Type': 'application/json'
-        }
+        })
         if result is not None:
             if type(result) == ErrorResponse:
                 self.response.set_status(result.status_code)
