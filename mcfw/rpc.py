@@ -205,7 +205,6 @@ def parse_complex_value(type_, value, islist):
             return parser(value)
 
 
-
 def check_function_metadata(function):
     if 'kwarg_types' not in function.meta or 'return_type' not in function.meta:
         raise ValueError('Can not execute function. Too little meta information is available!')
@@ -413,7 +412,7 @@ def _parse_value(name, type_, value):
             raise ValueError('Incorrect type received for parameter \'%s\'. Expected %s and got %s (%s).'
                              % (name, type_, type(value), value))
         else:
-            raise ValueError('Could not parse %s as %s'%(value, type_))
+            raise ValueError('Could not parse %s as %s' % (value, type_))
 
     istuple = isinstance(type_, tuple)
     if (istuple and set(type_).issubset(_value_types)) or type_ in _value_types:

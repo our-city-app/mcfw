@@ -101,6 +101,7 @@ def set_cache_key(wrapped, f):
 def ds_key(version, cache_key):
     return '%s-%s' % (version, hashlib.sha256(cache_key).hexdigest())
 
+
 if __GAE__:
     class DSCache(ndb.Model):
         creation_timestamp = ndb.IntegerProperty()
@@ -114,6 +115,7 @@ if __GAE__:
         @classmethod
         def create_key(cls, ds_key):
             return ndb.Key(cls, ds_key)
+
 
 def invalidate_cache(f, *args, **kwargs):
     f.invalidate_cache(*args, **kwargs)
