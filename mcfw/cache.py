@@ -22,9 +22,12 @@ import threading
 import time
 from collections import defaultdict
 from functools import wraps
-
-from google.appengine.api import memcache as mod_memcache
-from google.appengine.ext import ndb
+try:
+    from google.appengine.api import memcache as mod_memcache
+    from google.appengine.ext import ndb
+    __GAE__ = True
+except ImportError:  # Allow running outside google app engine
+    __GAE__ = False
 
 from mcfw.consts import MISSING
 from mcfw.serialization import serializer, s_bool, get_serializer, s_any, deserializer, get_deserializer, ds_bool, \
@@ -98,20 +101,19 @@ def set_cache_key(wrapped, f):
 def ds_key(version, cache_key):
     return '%s-%s' % (version, hashlib.sha256(cache_key).hexdigest())
 
+if __GAE__:
+    class DSCache(ndb.Model):
+        creation_timestamp = ndb.IntegerProperty()
+        description = ndb.StringProperty(indexed=False)
+        value = ndb.BlobProperty()
 
-class DSCache(ndb.Model):
-    creation_timestamp = ndb.IntegerProperty()
-    description = ndb.StringProperty(indexed=False)
-    value = ndb.BlobProperty()
+        @property
+        def ds_key(self):
+            return self.key.id()
 
-    @property
-    def ds_key(self):
-        return self.key.id()
-
-    @classmethod
-    def create_key(cls, ds_key):
-        return ndb.Key(cls, ds_key)
-
+        @classmethod
+        def create_key(cls, ds_key):
+            return ndb.Key(cls, ds_key)
 
 def invalidate_cache(f, *args, **kwargs):
     f.invalidate_cache(*args, **kwargs)
