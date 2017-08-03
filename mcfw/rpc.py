@@ -20,7 +20,10 @@ import itertools
 import logging
 import time
 import types
-from google.appengine.ext import ndb
+try:
+    from google.appengine.ext import ndb
+except ImportError:  # Allow running outside google app engine
+    pass
 from types import NoneType
 
 from cache import set_cache_key
@@ -189,11 +192,17 @@ def parse_parameters(function, parameters):
 def parse_complex_value(type_, value, islist):
     if value is None:
         return None
-    parser = _get_complex_parser(type_)
-    if islist:
-        return map(parser, value)
+    if isinstance(type_, tuple):
+        if islist:
+            return [_parse_value(None, type_, val) for val in value]
+        else:
+            return _parse_value(None, type_, value)
     else:
-        return parser(value)
+        parser = _get_complex_parser(type_)
+        if islist:
+            return map(parser, value)
+        else:
+            return parser(value)
 
 
 def check_function_metadata(function):
@@ -247,7 +256,15 @@ def serialize_complex_value(value, type_, islist, skip_missing=False):
         return value
 
     def optimal_serializer(val):
-        if not isinstance(type_, object_factory) and isinstance(val, type_):
+        if isinstance(type_, tuple):
+            for type_option in type_:
+                if isinstance(val, type_option):
+                    def serializer(value, skip_missing):
+                        return serialize_value(value, type_option, False, skip_missing)
+                    break
+            else:
+                raise ValueError("Could not map val to a type in %s" % type_)
+        elif not isinstance(type_, object_factory) and isinstance(val, type_):
             serializer = _get_complex_serializer(val.__class__)
         else:
             serializer = _get_complex_serializer(type_)
@@ -391,8 +408,11 @@ _value_types = {int, long, float, bool, NoneType}
 
 def _parse_value(name, type_, value):
     def raize():
-        raise ValueError('Incorrect type received for parameter \'%s\'. Expected %s and got %s (%s).'
-                         % (name, type_, type(value), value))
+        if name:
+            raise ValueError('Incorrect type received for parameter \'%s\'. Expected %s and got %s (%s).'
+                             % (name, type_, type(value), value))
+        else:
+            raise ValueError('Could not parse %s as %s' % (value, type_))
 
     istuple = isinstance(type_, tuple)
     if (istuple and set(type_).issubset(_value_types)) or type_ in _value_types:
