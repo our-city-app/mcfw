@@ -208,13 +208,13 @@ register(datetime.datetime, s_datetime, ds_datetime)
 
 
 @serializer
-def s_key(stream, obj):
-    s_str(stream, str(obj))
+def s_key(stream, key):
+    s_str(stream, key.urlsafe())
 
 
 @deserializer
 def ds_key(stream):
-    return ndb.Key(ds_str(stream))
+    return ndb.Key(urlsafe=ds_str(stream))
 
 
 if 'ndb' in locals():
@@ -246,7 +246,7 @@ if 'users' in locals():
 
 
 def _get_model_properties(model):
-    props = model.properties()
+    props = model._properties
     if not hasattr(model, 'ATTRIBUTES_HASH'):
         prop_keys = sorted(props.keys())
         prop_key_hash = hash(','.join(prop_keys))
@@ -264,19 +264,19 @@ def s_model(stream, obj, clazz=None):
         clazz = obj.__class__
     hash_, keys, properties = _get_model_properties(clazz)
     s_long(stream, hash_)
-    s_str(stream, str(obj.key()))
+    s_key(stream, obj.key)
     for key in keys:
         prop = properties[key]
         value = getattr(obj, key)
         prop_repeated = prop._repeated
-        if prop.__class__ in (ndb.StringProperty):
+        if prop.__class__ == ndb.StringProperty:
             if prop_repeated:
                 s_long(stream, len(value))
                 for s in value:
                     s_unicode(stream, s)
             else:
                 s_unicode(stream, value)
-        elif prop.__class__ in (ndb.IntegerProperty):
+        elif prop.__class__ == ndb.IntegerProperty:
             if prop_repeated:
                 s_long(stream, len(value))
                 for i in value:
@@ -320,17 +320,17 @@ def model_deserializer(stream, cls):
     if hash_ != inst_hash:
         raise SerializedObjectOutOfDateException()
     kwargs = dict()
-    model_key = ds_str(stream)
+    model_key = ds_key(stream)
     for property_name in keys:
         prop = properties[property_name]
         prop_repeated = prop._repeated
-        if prop.__class__ in (ndb.StringProperty):
+        if prop.__class__ == ndb.StringProperty:
             if prop_repeated:
                 length = ds_long(stream)
                 value = [ds_unicode(stream) for _ in xrange(length)]
             else:
                 value = ds_unicode(stream)
-        elif prop.__class__ in (ndb.IntegerProperty):
+        elif prop.__class__ == ndb.IntegerProperty:
             if prop_repeated:
                 length = ds_long(stream)
                 value = [ds_long(stream) for _ in xrange(length)]
@@ -362,7 +362,7 @@ def model_deserializer(stream, cls):
             raise NotImplementedError('Can not deserialize %s instances' % prop.__class__)
         kwargs[property_name] = value
 
-    return cls(key=ndb.Key(model_key), **kwargs)
+    return cls(key=model_key, **kwargs)
 
 
 def get_list_serializer(func):

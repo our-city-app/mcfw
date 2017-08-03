@@ -128,7 +128,7 @@ def arguments(**kwarg_types):
             # apply default value if available
             for arg, _ in kwarg_types.iteritems():
                 value = kwargs.get(arg, f_arg_defaults[arg])
-                if value == MISSING:
+                if value is MISSING:
                     value = f_arg_defaults.get(arg, MISSING)
                 kwargs[arg] = value
             # validate number of arguments
@@ -308,7 +308,7 @@ DICT_KEY_ITERATOR_TYPE = type({}.iterkeys())
 
 
 def _check_type(name, type_, value, accept_missing=False, func=None):
-    if value == MISSING:
+    if value is MISSING:
         if accept_missing:
             return value
         else:
