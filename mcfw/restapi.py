@@ -75,9 +75,9 @@ def register_postcall_hook(callable_):
 
 
 def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix=None, silent=False,
-         silent_result=False):
+         silent_result=False, custom_auth_method=None):
     if method not in ('get', 'post', 'put', 'delete'):
-        ValueError('method')
+        raise ValueError('method')
     if scopes is None:
         scopes = []
     if isinstance(scopes, str):
@@ -101,8 +101,9 @@ def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix
             'uri': api_url,
             'scopes': scopes,
             'method': method,
-            "silent": silent,
-            "silent_result": silent_result
+            'silent': silent,
+            'silent_result': silent_result,
+            'custom_auth_method': custom_auth_method
         }
         if hasattr(f, 'meta'):
             wrapped.meta.update(f.meta)
@@ -175,6 +176,8 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
         for name, type_ in function.meta['kwarg_types'].iteritems():
             if name in self.request.GET:
                 kwargs[name] = self.ctype(type_, self.request.GET[name])
+            elif name in kwargs:
+                kwargs[name] = self.ctype(type_, kwargs[name])
 
     def get(self, *args, **kwargs):
         GenericRESTRequestHandler.setCurrent(self.request, self.response)
@@ -245,7 +248,11 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
             kwargs (dict)
         Returns: callable
         """
-        if f.meta['authentication'] == AUTHENTICATED:
+        if f.meta['custom_auth_method']:
+            if not f.meta['custom_auth_method'](f, self):
+                self.abort(httplib.FORBIDDEN)
+
+        elif f.meta['authentication'] == AUTHENTICATED:
             session = INJECTED_FUNCTIONS.get_current_session()
             if not session:
                 self.abort(httplib.UNAUTHORIZED)
