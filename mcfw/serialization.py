@@ -303,6 +303,13 @@ def s_model(stream, obj, clazz=None):
             s_unicode(stream, value)
         elif isinstance(prop, CustomProperty):
             prop.get_serializer()(stream, value)
+        elif isinstance(prop, ndb.StructuredProperty):
+            if prop_repeated:
+                s_long(stream, len(value))
+                for m in value:
+                    s_model(stream, m)
+            else:
+                s_model(stream, value)
         elif prop.__class__ == ndb.polymodel._ClassKeyProperty:
             continue
         else:
@@ -356,6 +363,12 @@ def model_deserializer(stream, cls):
             value = ds_unicode(stream)
         elif isinstance(prop, CustomProperty):
             value = prop.get_deserializer()(stream)
+        elif isinstance(prop, ndb.StructuredProperty):
+            if prop_repeated:
+                length = ds_long(stream)
+                value = [ds_model(stream, cls) for _ in xrange(length)]
+            else:
+                value = ds_model(stream, cls)
         elif prop.__class__ == ndb.polymodel._ClassKeyProperty:
             continue
         else:
@@ -395,6 +408,7 @@ def get_list_deserializer(func, needsVersionArg=False):
 
 
 class List(object):
+
     def __init__(self, type_):
         self.type = type_
 
