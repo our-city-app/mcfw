@@ -20,6 +20,7 @@ import inspect
 import json
 import logging
 import threading
+import urllib
 import webapp2
 from collections import defaultdict
 from types import NoneType
@@ -175,7 +176,7 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
     def update_kwargs(self, function, kwargs):
         for name, type_ in function.meta['kwarg_types'].iteritems():
             if name in self.request.GET:
-                kwargs[name] = self.ctype(type_, self.request.GET[name])
+                kwargs[name] = self.ctype(type_, urllib.unquote(self.request.GET[name]))
             elif name in kwargs:
                 kwargs[name] = self.ctype(type_, kwargs[name])
 
