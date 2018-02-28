@@ -18,7 +18,6 @@
 import inspect
 import itertools
 import logging
-import time
 import types
 try:
     from google.appengine.ext import ndb
@@ -51,42 +50,6 @@ class MissingArgumentException(Exception):
         Exception.__init__(self, '%s is a required argument%s!' % (
             name, (' in function %s' % func.func_name) if func else ''))
         self.name = name
-
-
-def log_access(call=True, response=True):
-    def wrap(f):
-
-        def logged(*args, **kwargs):
-            if call:
-                arg_str = ''
-                for i, arg in enumerate(args):
-                    arg_str += '  %s: %s\n' % (i, arg)
-                kwarg_str = ''
-                for kw, arg in kwargs.iteritems():
-                    kwarg_str += '  %s: %s\n' % (kw, arg)
-                logging.debug(u'%s.%s\nargs:\n%skwargs:\n%s' % (f.__module__, f.__name__, arg_str, kwarg_str))
-            start = time.time()
-            try:
-                result = f(*args, **kwargs)
-                if response:
-                    end = time.time()
-                    logging.debug(
-                        u'%s.%s finished in %s seconds returning %s' % (f.__module__, f.__name__, end - start, result))
-                return result
-            except:
-                if response:
-                    end = time.time()
-                    logging.exception(u'%s.%s failed in %s seconds' % (f.__module__, f.__name__, end - start))
-                raise
-
-        set_cache_key(logged, f)
-        logged.__name__ = f.__name__
-        logged.__module__ = f.__module__
-        if hasattr(f, u'meta'):
-            logged.meta.update(f.meta)
-        return logged
-
-    return wrap
 
 
 def arguments(**kwarg_types):
@@ -275,7 +238,7 @@ def serialize_complex_value(value, type_, islist, skip_missing=False):
     if islist:
         try:
             return map(optimal_serializer, value)
-        except:
+        except Exception:
             logging.warn('value for type %s was %s', type_, value)
             raise
     else:

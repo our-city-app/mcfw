@@ -1,9 +1,11 @@
-import unittest
 import sys
-sys.path.append('..')
+import unittest
 
 from mcfw.properties import unicode_property, long_property, typed_property
 from mcfw.rpc import serialize_complex_value, parse_complex_value
+
+sys.path.append('..')
+
 
 class Test(unittest.TestCase):
 
