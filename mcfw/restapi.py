@@ -77,7 +77,7 @@ def register_postcall_hook(callable_):
 
 def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix=None, silent=False,
          silent_result=False, custom_auth_method=None):
-    if method not in ('get', 'post', 'put', 'delete'):
+    if method not in ('get', 'post', 'put', 'delete', 'options'):
         raise ValueError('method')
     if scopes is None:
         scopes = []
@@ -225,6 +225,22 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
             return
         self.update_kwargs(f, kwargs)
         self.write_result(self.run(f, args, kwargs))
+
+    def options(self, *args, **kwargs):
+        GenericRESTRequestHandler.setCurrent(self.request, self.response)
+        f = self.get_handler('options', self.request.route)
+        if not f:
+            return
+        self.update_kwargs(f, kwargs)
+        headers = self.run(f, args, kwargs) or {}
+        if 'Access-Control-Allow-Origin' not in headers:
+            headers['Access-Control-Allow-Origin'] = '*'
+        if 'Access-Control-Allow-Methods' not in headers:
+            methods = [method.upper() for method in _rest_handlers[self.request.route.template].keys()]
+            headers['Access-Control-Allow-Methods'] = ', '.join(methods)
+        if 'Access-Control-Allow-Headers' not in headers:
+            headers['Access-Control-Allow-Headers'] = '*'
+        self.response.headers.update(headers)
 
     def write_result(self, result):
         self.response.headers.update({
