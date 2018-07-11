@@ -21,9 +21,10 @@ import json
 import logging
 import threading
 import urllib
-import webapp2
 from collections import defaultdict
 from types import NoneType
+
+import webapp2
 
 from consts import DEBUG, AUTHENTICATED, NOT_AUTHENTICATED
 from mcfw.exceptions import HttpException, HttpBadRequestException
@@ -147,7 +148,7 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
                 return bool(value) and value.lower() == 'true'
             return type_(value)
         elif isinstance(type_, list):
-            return [self.ctype(type_[0], item) for item in value.split(',')]
+            return [self.ctype(type_[0], item) for item in value]
         elif type_ == (str, unicode):
             return unicode(value)
         elif type_ == (int, long):
@@ -176,7 +177,10 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
     def update_kwargs(self, function, kwargs):
         for name, type_ in function.meta['kwarg_types'].iteritems():
             if name in self.request.GET:
-                kwargs[name] = self.ctype(type_, urllib.unquote(self.request.GET[name]))
+                if isinstance(type_, list):
+                    kwargs[name] = self.ctype(type_, [urllib.unquote(p) for p in self.request.GET.getall(name)])
+                else:
+                    kwargs[name] = self.ctype(type_, urllib.unquote(self.request.GET.get(name)))
             elif name in kwargs:
                 kwargs[name] = self.ctype(type_, kwargs[name])
 
