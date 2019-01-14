@@ -197,6 +197,18 @@ register(float, s_float, ds_float)
 
 
 @serializer
+def s_dict(stream, obj):
+    s_unicode(stream, json.dumps(obj))
+
+
+@deserializer
+def ds_dict(stream):
+    return json.loads(ds_unicode(stream))
+
+
+register(dict, s_dict, ds_dict)
+
+@serializer
 def s_datetime(stream, obj):
     s_long(stream, int(time.mktime(obj.timetuple())))
 
