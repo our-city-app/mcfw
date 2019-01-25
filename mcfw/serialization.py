@@ -455,5 +455,16 @@ ds_float_list = get_list_deserializer(ds_float)
 register(List(float), s_float_list, ds_float_list)
 
 
+def s_dict_list(stream, value):
+    s_unicode(stream, json.dumps(value))
+
+
+def ds_dict_list(stream):
+    return json.loads(ds_unicode(stream))
+
+
+register(List(dict), s_dict_list, ds_dict_list)
+
+
 class SerializedObjectOutOfDateException(Exception):
     pass
