@@ -24,7 +24,7 @@ import logging
 import threading
 import urllib
 from collections import defaultdict
-from types import NoneType
+from types import NoneType, FunctionType
 
 import webapp2
 
@@ -79,7 +79,8 @@ def register_postcall_hook(callable_):
 
 
 def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix=None, silent=False,
-         silent_result=False, custom_auth_method=None):
+         silent_result=False, custom_auth_method=None, cors=False):
+    # type: (str, str, list[str], str, str, bool, bool, FunctionType, bool) -> FunctionType
     if method not in ('get', 'post', 'put', 'delete', 'options'):
         raise ValueError('method')
     if scopes is None:
@@ -107,7 +108,8 @@ def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix
             'method': method,
             'silent': silent,
             'silent_result': silent_result,
-            'custom_auth_method': custom_auth_method
+            'custom_auth_method': custom_auth_method,
+            'cors': cors,
         }
         if hasattr(f, 'meta'):
             wrapped.meta.update(f.meta)
@@ -131,18 +133,26 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
     def getCurrentResponse():
         return _current_reponse_tracker.current_response
 
+    get_current_response = getCurrentResponse
+
     @staticmethod
     def getCurrentRequest():
         return _current_reponse_tracker.current_request
+
+    get_current_request = getCurrentRequest
 
     @staticmethod
     def clearCurrent():
         _current_reponse_tracker.current_response = None
 
+    clear_current = clearCurrent
+
     @staticmethod
     def setCurrent(request, response):
         _current_reponse_tracker.current_request = request
         _current_reponse_tracker.current_response = response
+
+    set_current = setCurrent
 
     def ctype(self, type_, value):
         if not isinstance(type_, (list, tuple)):
@@ -185,6 +195,20 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
                     kwargs[name] = self.ctype(type_, urllib.unquote(self.request.GET.get(name)))
             elif name in kwargs:
                 kwargs[name] = self.ctype(type_, kwargs[name])
+
+    def dispatch(self):
+        f = self.get_handler(self.request.method.lower(), self.request.route)
+        if f and f.meta['cors']:
+            self.response.headers.add_header('Access-Control-Allow-Origin', '*')
+            self.response.headers.add_header('Access-Control-Allow-Headers', 'Content-Type')
+            methods = [method.upper() for method in _rest_handlers[self.request.route.template].keys()]
+            headers = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': ', '.join(methods),
+                'Access-Control-Allow-Headers': '*',
+            }
+            self.response.headers.update(headers)
+        super(GenericRESTRequestHandler, self).dispatch()
 
     def get(self, *args, **kwargs):
         GenericRESTRequestHandler.setCurrent(self.request, self.response)
@@ -239,13 +263,6 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
             return
         self.update_kwargs(f, kwargs)
         headers = self.run(f, args, kwargs) or {}
-        if 'Access-Control-Allow-Origin' not in headers:
-            headers['Access-Control-Allow-Origin'] = '*'
-        if 'Access-Control-Allow-Methods' not in headers:
-            methods = [method.upper() for method in _rest_handlers[self.request.route.template].keys()]
-            headers['Access-Control-Allow-Methods'] = ', '.join(methods)
-        if 'Access-Control-Allow-Headers' not in headers:
-            headers['Access-Control-Allow-Headers'] = '*'
         self.response.headers.update(headers)
 
     def write_result(self, result):
