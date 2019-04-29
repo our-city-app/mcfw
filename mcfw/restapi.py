@@ -184,7 +184,8 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
                 return _rest_handlers[route.template][method]
             else:
                 self.response.set_status(httplib.METHOD_NOT_ALLOWED, httplib.responses[httplib.METHOD_NOT_ALLOWED])
-        self.response.set_status(httplib.NOT_FOUND, httplib.responses[httplib.NOT_FOUND])
+        else:
+            self.response.set_status(httplib.NOT_FOUND, httplib.responses[httplib.NOT_FOUND])
 
     def update_kwargs(self, function, kwargs):
         for name, type_ in function.meta['kwarg_types'].iteritems():
