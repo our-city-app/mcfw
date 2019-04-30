@@ -17,12 +17,13 @@
 #
 # @@license_version:1.5@@
 
-import datetime
 import json
-import time
 import types
 from functools import wraps
 from struct import Struct
+
+import datetime
+import time
 
 try:
     from google.appengine.api import users
@@ -50,7 +51,14 @@ _doubleStruct = Struct('<d')
 
 
 class CustomProperty(object):
-    pass
+
+    @staticmethod
+    def get_serializer():
+        raise NotImplementedError()
+
+    @staticmethod
+    def get_deserializer():
+        raise NotImplementedError()
 
 
 def register(type_, serializer, deserializer):
@@ -209,6 +217,7 @@ def ds_dict(stream):
 
 register(dict, s_dict, ds_dict)
 
+
 @serializer
 def s_datetime(stream, obj):
     s_long(stream, int(time.mktime(obj.timetuple())))
@@ -238,7 +247,7 @@ if 'ndb' in locals():
 
 @serializer
 def s_any(stream, obj):
-    pickle.dump(obj, stream)
+    pickle.dump(obj, stream, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 @deserializer

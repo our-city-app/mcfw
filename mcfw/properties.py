@@ -20,8 +20,9 @@
 import hashlib
 import inspect
 import pprint
-import sys
 from types import NoneType
+
+import sys
 
 from consts import MISSING
 
@@ -61,11 +62,14 @@ __none__ = '__none__'
 
 
 class object_factory(object):
+
     def __init__(self, subtype_attr_name, subtype_mapping):
         self.subtype_attr_name = subtype_attr_name
         self.subtype_mapping = subtype_mapping
 
     def get_subtype(self, instance):
+        if instance is MISSING or instance is None:
+            return self
         if isinstance(instance, dict):
             subtype_name = instance.get(self.subtype_attr_name)
         else:
@@ -82,6 +86,7 @@ class object_factory(object):
 
 
 class typed_property(object):
+
     def __init__(self, name, type_, list_=False, doc=None, subtype_attr_name=None, subtype_mapping=None,
                  default=MISSING, hash_serializer=str):
         self.type = type_
@@ -95,7 +100,7 @@ class typed_property(object):
                'subtype_mapping is not supported in combination with lists')
         self.subtype_attr_name = subtype_attr_name
         self.subtype_mapping = subtype_mapping
-        if default != MISSING:
+        if default is not MISSING:
             if list_:
                 azzert(hasattr(default, '__iter__') and len(default) == 0,
                        'Only empty list allowed as default value for list properties')
@@ -104,6 +109,7 @@ class typed_property(object):
                        'None not allowed for %s properties' % self.type)
 
         self.default = default
+        self.__name__ = name
 
     def __doc__(self):
         return self.doc
@@ -112,10 +118,10 @@ class typed_property(object):
         if not instance:
             return self
         else:
-            return getattr(instance, self.attr_name, MISSING)
+            return getattr(instance, self.attr_name, self.default)
 
     def __set__(self, instance, value):
-        if value != MISSING:
+        if value is not MISSING:
             if self.list:
                 if not isinstance(value, (list, tuple, set)):
                     raise ValueError(
@@ -178,7 +184,6 @@ def _generate_properties():
 
             return init
 
-        global _this_mod
         _this_mod[name] = type(name, (typed_property,), {'__init__': wrap(type_, list_)})
 
 
@@ -188,6 +193,7 @@ del _this_mod
 
 
 class unicode_property(typed_property):
+
     def __init__(self, name, doc=None, empty_string_is_null=False, default=MISSING):
         typed_property.__init__(self, name, unicode, False, doc, default=default,
                                 hash_serializer=lambda x: __none__ if x is None else x.encode('utf8'))
@@ -201,17 +207,17 @@ class unicode_property(typed_property):
 simple_property_types = [unicode_property, unicode_list_property, float_property, float_list_property,
                          bool_property, bool_list_property, long_property, long_list_property]
 
-_members_cache = dict()
+_members_cache = {}
 
 
 def get_members(type_):
     if type_ in _members_cache:
-        return _members_cache[type]
+        return _members_cache[type_]
     else:
         members = sorted(inspect.getmembers(type_, lambda value: isinstance(value, typed_property)), key=lambda x: x[0])
         simple_members = filter(lambda (name, prop): type(prop) in simple_property_types, members)
         complex_members = filter(lambda x: x not in simple_members, members)
-        _members_cache[type] = (complex_members, simple_members)
+        _members_cache[type_] = (complex_members, simple_members)
         return complex_members, simple_members
 
 

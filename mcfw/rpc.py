@@ -18,16 +18,14 @@
 # @@license_version:1.5@@
 
 import inspect
-import itertools
 import logging
 import types
-try:
-    from google.appengine.ext import ndb
-except ImportError:  # Allow running outside google app engine
-    pass
 from types import NoneType
 
-from cache import set_cache_key
+import itertools
+from google.appengine.ext import ndb
+
+from mcfw.cache import set_cache_key
 from mcfw.consts import MISSING
 from mcfw.properties import get_members, simple_types, object_factory, long_property, unicode_property, typed_property
 
@@ -48,6 +46,7 @@ class ErrorResponse(object):
 
 
 class MissingArgumentException(Exception):
+
     def __init__(self, name, func=None):
         Exception.__init__(self, '%s is a required argument%s!' % (
             name, (' in function %s' % func.func_name) if func else ''))
@@ -347,7 +346,7 @@ _complexParserCache = {}
 
 
 def _get_complex_parser(type_):
-    if type_ == dict:
+    if type_ is dict:
         return lambda x: x
     if type_ not in _complexParserCache:
         def parse(value):
@@ -355,11 +354,12 @@ def _get_complex_parser(type_):
             inst = t()
 
             complex_members, simple_members = get_members(t)
-            map(lambda (name, prop): setattr(inst, name, value[name] if name in value else MISSING), simple_members)
-            map(lambda (name, prop):
+            for name, prop in simple_members:
+                setattr(inst, name, value[name] if name in value else getattr(t, name).default)
+            for name, prop in complex_members:
                 setattr(inst, name, parse_complex_value(
                     prop.get_subtype(inst) if (prop.subtype_attr_name and prop.subtype_mapping) else prop.type,
-                    value[name], prop.list) if name in value else MISSING), complex_members)
+                    value[name], prop.list) if name in value else MISSING)
             return inst
 
         _complexParserCache[type_] = parse
@@ -378,7 +378,6 @@ def _parse_value(name, type_, value):
                              % (name, type_, type(value), value))
         else:
             raise ValueError('Could not parse %s as %s' % (value, type_))
-
     istuple = isinstance(type_, tuple)
     if (istuple and set(type_).issubset(_value_types)) or type_ in _value_types:
         if not isinstance(value, type_):
@@ -415,17 +414,17 @@ def _get_complex_serializer(type_):
             t = type_.get_subtype(value) if isinstance(type_, object_factory) else type_
             complex_members, simple_members = get_members(t)
 
-            result = dict([(name, getattr(value, name)) for (name, _) in simple_members if
-                           not skip_missing or getattr(value, name) != MISSING])
+            result = {name: getattr(value, name) for (name, _) in simple_members
+                      if not skip_missing or getattr(value, name) is not MISSING}
 
             def _serialize(name, prop):
                 attr = getattr(value, name)
                 real_type = prop.get_subtype(value) if (prop.subtype_attr_name and prop.subtype_mapping) else prop.type
                 serialized_value = serialize_complex_value(attr, real_type, prop.list, skip_missing)
-                return (name, serialized_value)
+                return serialized_value
 
-            result.update(dict([_serialize(name, prop) for (name, prop) in complex_members if
-                                not skip_missing or getattr(value, name) != MISSING]))
+            result.update({name: _serialize(name, prop) for (name, prop) in complex_members
+                           if not skip_missing or getattr(value, name) is not MISSING})
 
             return result
 
