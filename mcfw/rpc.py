@@ -55,12 +55,11 @@ class MissingArgumentException(Exception):
 
 def arguments(**kwarg_types):
     """ The arguments decorator function describes & validates the parameters of the function."""
-    map(_validate_type_spec, kwarg_types.itervalues())
+    for value in kwarg_types.itervalues():
+        _validate_type_spec(value)
 
     def wrap(f):
         # validate argspec
-        if not inspect.isfunction(f):
-            raise ValueError('f is not of type function!')
         f_args = inspect.getargspec(f)
         f_args = inspect.ArgSpec([a for a in f_args[0] if a not in ('self', 'cls')], f_args[1], f_args[2], f_args[3])
         f_arg_count = len(f_args[0])
@@ -69,28 +68,31 @@ def arguments(**kwarg_types):
             f_defaults = []
         f_arg_defaults_count = len(f_defaults)
         f_arg_no_defaults_count = f_arg_count - f_arg_defaults_count
-        f_arg_defaults = dict(
-            (f_args[0][i], f_defaults[i - f_arg_no_defaults_count] if i >= f_arg_no_defaults_count else MISSING) for i
-            in xrange(f_arg_count))
-        f_pure_default_args_dict = dict((f_args[0][i], f_defaults[i - f_arg_no_defaults_count]) for i in
-                                        xrange(f_arg_no_defaults_count, f_arg_count))
-        if not f_arg_count == len(kwarg_types):
+        f_arg_defaults = {
+            f_args[0][i]: f_defaults[i - f_arg_no_defaults_count] if i >= f_arg_no_defaults_count else MISSING
+            for i in xrange(f_arg_count)}
+        f_pure_default_args_dict = {f_args[0][i]: f_defaults[i - f_arg_no_defaults_count]
+                                    for i in xrange(f_arg_no_defaults_count, f_arg_count)}
+        if f_arg_count != len(kwarg_types):
             raise ValueError(f.func_name + ' does not contain the expected arguments!')
-        unknown_args = filter(lambda arg: arg not in kwarg_types, f_args[0])
+        unknown_args = [arg for arg in f_args[0] if arg not in kwarg_types]
         if unknown_args:
             raise ValueError('No type information is supplied for %s!' % ', '.join(unknown_args))
 
         def typechecked_f(*args, **kwargs):
-            if len(args) > len(f_args[0]):
-                raise ValueError('%s() takes %s arguments (%s given)' % (f.__name__, len(f_args[0]), len(args)))
+            arg_length = len(args)
+            if arg_length > f_arg_count:
+                raise ValueError('%s() takes %s arguments (%s given)' % (f.__name__, f_arg_count, arg_length))
 
-            kwargs.update(dict(((f_args[0][i], args[i]) for i in xrange(len(args)))))
+            for i in xrange(arg_length):
+                kwargs[f_args[0][i]] = args[i]
+
             # accept MISSING as magical value or not
-            accept_missing = u'accept_missing' in kwargs
+            accept_missing = 'accept_missing' in kwargs
             if accept_missing:
-                kwargs.pop(u'accept_missing')
+                kwargs.pop('accept_missing')
             # apply default value if available
-            for arg, _ in kwarg_types.iteritems():
+            for arg in kwarg_types:
                 value = kwargs.get(arg, f_arg_defaults[arg])
                 if value is MISSING:
                     value = f_arg_defaults.get(arg, MISSING)
@@ -99,21 +101,21 @@ def arguments(**kwarg_types):
             if not len(kwargs) == len(kwarg_types):
                 raise ValueError('kwarg mismatch\nExpected:%s\nGot:%s' % (kwarg_types, kwargs))
             # validate supplied arguments
-            unknown_args = filter(lambda arg: arg not in kwarg_types, kwargs)
+            unknown_args = [arg for arg in kwargs if arg not in kwarg_types]
             if unknown_args:
                 raise ValueError('Unknown argument(s) %s supplied!' % ', '.join(unknown_args))
             # validate argument values
-            map(lambda arg: _check_type(arg, kwarg_types[arg], kwargs[arg], accept_missing=accept_missing, func=f),
-                kwargs)
+            for arg in kwargs:
+                _check_type(arg, kwarg_types[arg], kwargs[arg], accept_missing=accept_missing, func=f)
             return f(**kwargs)
 
         set_cache_key(typechecked_f, f)
         typechecked_f.__name__ = f.__name__
         typechecked_f.__module__ = f.__module__
-        typechecked_f.meta[u'fargs'] = f_args
-        typechecked_f.meta[u'kwarg_types'] = kwarg_types
-        typechecked_f.meta[u'pure_default_args_dict'] = f_pure_default_args_dict
-        if hasattr(f, u'meta'):
+        typechecked_f.meta['fargs'] = f_args
+        typechecked_f.meta['kwarg_types'] = kwarg_types
+        typechecked_f.meta['pure_default_args_dict'] = f_pure_default_args_dict
+        if hasattr(f, 'meta'):
             typechecked_f.meta.update(f.meta)
 
         return typechecked_f
