@@ -30,7 +30,6 @@ import webapp2
 
 from consts import DEBUG, AUTHENTICATED, NOT_AUTHENTICATED
 from mcfw.exceptions import HttpException, HttpBadRequestException
-from mcfw.properties import simple_types
 from mcfw.rpc import run, ErrorResponse, serialize_complex_value, MissingArgumentException, parse_complex_value
 
 DEFAULT_API_VERSION = 'v1.0'
@@ -46,16 +45,16 @@ class BadRequestResponse(Exception):
 
 class InjectedFunctions(object):
     def __init__(self):
-        self._get_session_function = None
+        self._validate_authentication = None
         self._api_url_template = None
 
     @property
-    def get_current_session(self):
-        return self._get_session_function
+    def validate_authentication(self):
+        return self._validate_authentication
 
-    @get_current_session.setter
-    def get_current_session(self, function):
-        self._get_session_function = function
+    @validate_authentication.setter
+    def validate_authentication(self, function):
+        self._validate_authentication = function
 
     @property
     def get_api_url_template(self):
@@ -85,7 +84,7 @@ def rest(uri, method='get', scopes=None, version=DEFAULT_API_VERSION, uri_prefix
         raise ValueError('method')
     if scopes is None:
         scopes = []
-    if isinstance(scopes, str):
+    if isinstance(scopes, basestring):
         scopes = [scopes]
 
     def wrap(f):
@@ -292,24 +291,8 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
         if f.meta['custom_auth_method']:
             if not f.meta['custom_auth_method'](f, self):
                 self.abort(httplib.FORBIDDEN)
-
         elif f.meta['authentication'] == AUTHENTICATED:
-            session = INJECTED_FUNCTIONS.get_current_session()
-            if not session:
-                self.abort(httplib.UNAUTHORIZED)
-
-            if f.meta['scopes']:
-                scopes = set()
-                simple_kwargs = {}
-                for kwarg in kwargs:
-                    if type(kwargs[kwarg]) in simple_types:
-                        simple_kwargs[kwarg] = kwargs[kwarg]
-
-                for scope in f.meta['scopes']:
-                    scopes.add(scope.format(**simple_kwargs))
-
-                if not any(scope in scopes for scope in session.scopes):
-                    self.abort(httplib.FORBIDDEN)
+            INJECTED_FUNCTIONS.validate_authentication(self, f, args, kwargs)
 
         for hook in _precall_hooks:
             hook(f, *args, **kwargs)
