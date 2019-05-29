@@ -199,13 +199,10 @@ class GenericRESTRequestHandler(webapp2.RequestHandler):
     def dispatch(self):
         f = self.get_handler(self.request.method.lower(), self.request.route)
         if f and f.meta['cors']:
-            self.response.headers.add_header('Access-Control-Allow-Origin', '*')
-            self.response.headers.add_header('Access-Control-Allow-Headers', 'Content-Type')
             methods = [method.upper() for method in _rest_handlers[self.request.route.template].keys()]
             headers = {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': ', '.join(methods),
-                'Access-Control-Allow-Headers': '*',
             }
             self.response.headers.update(headers)
         super(GenericRESTRequestHandler, self).dispatch()
