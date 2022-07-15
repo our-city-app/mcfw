@@ -17,55 +17,52 @@
 #
 # @@license_version:1.5@@
 
-import sys
 import unittest
 
-from mcfw.properties import unicode_property, long_property, typed_property
-from mcfw.rpc import serialize_complex_value, parse_complex_value
-
-sys.path.append('..')
+from fvfw.properties import UnicodeProperty, LongProperty, TypedProperty
+from fvfw.to import TO
 
 
 class Test(unittest.TestCase):
 
-    def test_mix_type_property(self):
-
-        class MyLittleTO(object):
-            name = unicode_property('name')
-            age = long_property('age')
+    def test_typed_property(self):
+        class MyLittleTO(TO):
+            name = UnicodeProperty()
+            age = LongProperty()
 
             def __str__(self):
-                return u"%s is %s years old" % (self.name, self.age)
+                return f'{self.name} is {self.age} years old'
 
             def __eq__(self, other):
                 return self.name == other.name and self.age == other.age
 
-        class MyPetTO(object):
-            person = typed_property('person', (unicode, MyLittleTO))
-            crew = typed_property('crew', (unicode, MyLittleTO), True)
+        class MyPetTO(TO):
+            person = TypedProperty(MyLittleTO)
+            crew = TypedProperty(MyLittleTO, True)
 
         felix = MyPetTO()
-        felix.person = u"nice"
-        felix.crew = [u"bart", u"donatello"]
+        felix.person = MyLittleTO(name='nice', age=69)
+        felix.crew = [MyLittleTO(name='bart'), MyLittleTO(name='donatello')]
 
-        ceaser = MyPetTO()
-        ceaser.person = MyLittleTO()
-        ceaser.person.name = u"ceaser"
-        ceaser.person.age = 35
-        ceaser.crew = [u"bart", MyLittleTO()]
-        ceaser.crew[1].name = u"donatello"
-        ceaser.crew[1].age = 34
+        ceaser = MyPetTO(
+            person=MyLittleTO(
+                name='ceaser',
+                age=35,
+            )
+        )
+        ceaser.crew = [MyLittleTO()]
+        ceaser.crew[0].name = 'donatello'
+        ceaser.crew[0].age = 34
 
         for person in ceaser.crew:
-            print person
+            print(person)
 
-        serialized = serialize_complex_value(ceaser, MyPetTO, False)
-        print serialized
-        ceaser2 = parse_complex_value(MyPetTO, serialized, False)
-        self.assertEquals(ceaser.person.name, ceaser2.person.name)
-        self.assertEquals(ceaser.person.age, ceaser2.person.age)
-        self.assertEquals(ceaser.crew[0], ceaser2.crew[0])
-        self.assertEquals(ceaser.crew[1], ceaser2.crew[1])
+        serialized = ceaser.to_dict()
+        print(serialized)
+        ceaser2 = MyPetTO.from_dict(serialized)
+        self.assertEqual(ceaser.person.name, ceaser2.person.name)
+        self.assertEqual(ceaser.person.age, ceaser2.person.age)
+        self.assertEqual(ceaser.crew[0], ceaser2.crew[0])
 
 
 if __name__ == '__main__':

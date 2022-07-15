@@ -1,8 +1,5 @@
 .idea
 dist/
-mcfw.egg-info/
+fvfw.egg-info/
 *.pyc
-.project
-.pydevproject
-.settings
 .DS_Store
