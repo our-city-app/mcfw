@@ -2,7 +2,8 @@
 # !/usr/bin/env python
 
 import os
-from distutils.core import setup
+
+from setuptools import setup
 
 import fvfw
 
@@ -12,7 +13,6 @@ def path(p):
 
 
 requirements = open('requirements.txt').read().splitlines()
-tests_requirements = requirements + []
 
 setup(
     name='fvfw',
@@ -35,5 +35,4 @@ setup(
     license='Apache 2.0',
     packages=['fvfw'],
     install_requires=requirements,
-    tests_require=tests_requirements,
 )
